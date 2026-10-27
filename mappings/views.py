@@ -50,7 +50,8 @@ class MappingListCreateView(APIView):
 
 class MappingByPatientView(APIView):
     """
-    GET /api/mappings/<patient_id>/ - Get all doctors assigned to a specific patient.
+    GET    /api/mappings/<patient_id>/ - Get all doctors assigned to a specific patient.
+    DELETE /api/mappings/<id>/         - Remove a doctor from a patient (by mapping ID).
     """
 
     permission_classes = [IsAuthenticated]
@@ -77,6 +78,27 @@ class MappingByPatientView(APIView):
                 "data": serializer.data,
             },
             status=status.HTTP_200_OK,
+        )
+
+    def delete(self, request, patient_id):
+        try:
+            mapping = PatientDoctorMapping.objects.get(pk=patient_id)
+        except PatientDoctorMapping.DoesNotExist:
+            return Response(
+                {
+                    "status": "error",
+                    "message": "Mapping not found.",
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        mapping.delete()
+        return Response(
+            {
+                "status": "success",
+                "message": "Doctor removed from patient successfully.",
+            },
+            status=status.HTTP_204_NO_CONTENT,
         )
 
 
