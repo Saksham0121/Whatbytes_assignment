@@ -16,18 +16,26 @@ A secure RESTful backend system for a healthcare application built with **Django
 
 ---
 
-## Security Features
+## Security & Scalability Features
 
-- **JWT Authentication** — stateless, token-based auth with access/refresh token rotation
+### Security Hardening
+- **JWT Authentication** — stateless, token-based auth with access/refresh token rotation and blacklist
 - **SQL Injection Prevention** — Django ORM uses parameterized queries exclusively
-- **XSS Protection** — all text inputs sanitized with `bleach` before storage
-- **Input Validation** — serializer-level validation on all fields
-- **Password Security** — Django's PBKDF2 hasher with password strength validation
-- **Rate Limiting** — 30 req/min for anonymous, 100 req/min for authenticated users
-- **CORS Protection** — whitelisted origins only
-- **Security Headers** — HSTS, XSS filter, content type sniffing prevention (production)
-- **Environment Variables** — secrets never hardcoded in source code
-- **Ownership-based Access Control** — users can only modify their own records
+- **Strict Input Sanitization** — centralized zero-tolerance sanitizer (`bleach` stripping tags/attributes and null bytes) to neutralize XSS and code injection
+- **AI Jailbreak & Prompt Injection Neutralization** — adversarial prompt injections treated strictly as passive, literal strings
+- **IDOR & Mass Assignment Defenses** — ownership-based access control, read-only system fields
+- **JWT Algorithm & Signature Enforcement** — alg "none" rejected, signature verification strictly enforced
+- **Password Security** — PBKDF2 hasher with minimum 8 characters and similarity validators
+- **Rate Limiting (DDoS Protection)** — 30 req/min for anonymous users, 100 req/min for authenticated users
+- **Security Headers & CORS** — HSTS, XSS filter, sniffing protection, frame deny, whitelisted CORS origins
+
+### Scalability Improvements
+- **Database Connection Pooling** — `CONN_MAX_AGE = 600` keeps PostgreSQL connections alive across requests, slashing TCP handshake overhead
+- **Connection Health Checks** — `CONN_HEALTH_CHECKS = True` automatically recycles stale database connections
+- **Response Compression** — `GZipMiddleware` compresses JSON payloads on the wire for high throughput
+- **Query Optimization** — `select_related('patient', 'doctor')` prevents N+1 query traps
+- **Database Indexes** — composite and foreign key indexes on high-frequency lookup fields
+- **In-Memory Cache** — high-speed Django `LocMemCache` configured without external service complexity
 
 ---
 
@@ -75,10 +83,10 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 7. Create superuser (optional)
+### 7. Run the test suite
 
 ```bash
-python manage.py createsuperuser
+python manage.py test tests
 ```
 
 ### 8. Run the development server
@@ -95,10 +103,11 @@ The API will be available at `http://localhost:8000/`.
 
 ### Authentication
 
-| Method | Endpoint               | Description                    | Auth Required |
-|--------|------------------------|--------------------------------|---------------|
-| POST   | `/api/auth/register/`  | Register a new user            | No            |
-| POST   | `/api/auth/login/`     | Login and get JWT tokens       | No            |
+| Method | Endpoint                    | Description                           | Auth Required |
+|--------|-----------------------------|---------------------------------------|---------------|
+| POST   | `/api/auth/register/`       | Register a new user                   | No            |
+| POST   | `/api/auth/login/`          | Login and get JWT tokens              | No            |
+| POST   | `/api/auth/token/refresh/`  | Refresh access token using refresh    | No            |
 
 ### Patients
 
@@ -127,7 +136,8 @@ The API will be available at `http://localhost:8000/`.
 | POST   | `/api/mappings/`                | Assign a doctor to a patient            | Yes           |
 | GET    | `/api/mappings/`                | List all mappings                       | Yes           |
 | GET    | `/api/mappings/<patient_id>/`   | Get all doctors for a specific patient  | Yes           |
-| DELETE | `/api/mappings/<id>/delete/`    | Remove a doctor from a patient          | Yes           |
+| DELETE | `/api/mappings/<id>/`           | Remove a doctor from a patient          | Yes           |
+| DELETE | `/api/mappings/<id>/delete/`    | Remove a doctor from a patient (alias)  | Yes           |
 
 ---
 
