@@ -1,11 +1,12 @@
 """
 Serializers for the Doctor model.
 
-All text inputs are sanitized using bleach to prevent XSS attacks.
+All text inputs are sanitized to strip ALL HTML tags and attributes.
 """
 
-import bleach
 from rest_framework import serializers
+
+from healthcare_backend.sanitizer import sanitize
 
 from .models import Doctor
 
@@ -39,13 +40,13 @@ class DoctorSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_by", "created_at", "updated_at")
 
     def validate_first_name(self, value):
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_last_name(self, value):
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_phone(self, value):
-        cleaned = bleach.clean(value.strip())
+        cleaned = sanitize(value)
         allowed = set("0123456789 -+()")
         if not all(c in allowed for c in cleaned):
             raise serializers.ValidationError(
@@ -54,7 +55,7 @@ class DoctorSerializer(serializers.ModelSerializer):
         return cleaned
 
     def validate_license_number(self, value):
-        cleaned = bleach.clean(value.strip())
+        cleaned = sanitize(value)
         # Check uniqueness (exclude current instance during updates)
         queryset = Doctor.objects.filter(license_number=cleaned)
         if self.instance:

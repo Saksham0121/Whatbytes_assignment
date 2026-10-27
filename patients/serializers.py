@@ -1,12 +1,13 @@
 """
 Serializers for the Patient model.
 
-All text inputs are sanitized using bleach to prevent XSS attacks.
-Django ORM's parameterized queries handle SQL injection prevention.
+All text inputs are sanitized to strip ALL HTML tags and attributes,
+preventing stored XSS attacks. Django ORM handles SQL injection prevention.
 """
 
-import bleach
 from rest_framework import serializers
+
+from healthcare_backend.sanitizer import sanitize
 
 from .models import Patient
 
@@ -38,13 +39,13 @@ class PatientSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_by", "created_at", "updated_at")
 
     def validate_first_name(self, value):
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_last_name(self, value):
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_phone(self, value):
-        cleaned = bleach.clean(value.strip())
+        cleaned = sanitize(value)
         # Allow digits, spaces, hyphens, plus sign, and parentheses
         allowed = set("0123456789 -+()")
         if not all(c in allowed for c in cleaned):
@@ -54,10 +55,10 @@ class PatientSerializer(serializers.ModelSerializer):
         return cleaned
 
     def validate_address(self, value):
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_medical_history(self, value):
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_gender(self, value):
         valid_choices = [choice[0] for choice in Patient.GENDER_CHOICES]
@@ -65,4 +66,10 @@ class PatientSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 f"Invalid gender. Choose from: {', '.join(valid_choices)}"
             )
+        return value
+
+    def validate_date_of_birth(self, value):
+        from django.utils import timezone
+        if value > timezone.now().date():
+            raise serializers.ValidationError("Date of birth cannot be in the future.")
         return value

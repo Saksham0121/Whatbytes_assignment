@@ -5,11 +5,12 @@ All user inputs are validated and sanitized before processing.
 Passwords are hashed using Django's built-in PBKDF2 hasher.
 """
 
-import bleach
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+
+from healthcare_backend.sanitizer import sanitize
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -40,18 +41,18 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         """Ensure email is unique and sanitized."""
-        email = bleach.clean(value.strip().lower())
+        email = sanitize(value).lower()
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError("A user with this email already exists.")
         return email
 
     def validate_first_name(self, value):
         """Sanitize first name input."""
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate_last_name(self, value):
         """Sanitize last name input."""
-        return bleach.clean(value.strip())
+        return sanitize(value)
 
     def validate(self, attrs):
         """Ensure both passwords match."""
@@ -88,7 +89,7 @@ class LoginSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        email = bleach.clean(attrs["email"].strip().lower())
+        email = sanitize(attrs["email"]).lower()
         password = attrs["password"]
 
         user = authenticate(username=email, password=password)
