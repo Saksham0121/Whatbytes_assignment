@@ -25,6 +25,9 @@ media/
 *.swp
 *.swo
 
+# Tests (local only)
+tests/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,0 +1,1037 @@
+openapi: 3.0.3
+info:
+  title: Healthcare Backend API
+  version: 1.0.0
+  description: |
+    A production-grade, secure RESTful backend API for a healthcare application.
+    Built with **Django**, **Django REST Framework**, and **PostgreSQL**.
+
+    ### Core Features:
+    - **JWT Authentication** (Bearer tokens with access/refresh rotation)
+    - **Patient Record Management** (Ownership-based access control)
+    - **Doctor Directory Management** (Global viewing, creator-only update/delete)
+    - **Patient-Doctor Assignment Mappings** (Unique constraints, duplicate prevention)
+    - **Hardened Security**: Parameterized queries (SQLi prevention), strict HTML & attribute stripping (XSS prevention), IDOR protection, and rate limiting (Anon 30/min, User 100/min).
+    - **Scalability**: Database connection pooling (`CONN_MAX_AGE=600`), persistent health checks, HTTP response GZip compression, and in-memory caching.
+  contact:
+    name: Healthcare System Admin
+    email: admin@healthcare.local
+servers:
+  - url: http://localhost:8000
+    description: Development Server (Default)
+  - url: http://localhost:8001
+    description: Development Server (Alternative Port)
+
+tags:
+  - name: Authentication
+    description: User registration, login, and JWT token refresh
+  - name: Patients
+    description: Patient record management (authenticated users)
+  - name: Doctors
+    description: Doctor directory and profile management
+  - name: Patient-Doctor Mappings
+    description: Assignment relationships between patients and doctors
+
+paths:
+  # ============================================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================================
+  /api/auth/register/:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: |
+        Create a new user account with first name, last name, email, and password.
+        Returns user information alongside JWT access and refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Validation error (e.g. duplicate email, weak password, missing fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login/:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate with email and password to receive JWT access and refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSuccessResponse'
+        '400':
+          description: Missing email or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Invalid email or password credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/token/refresh/:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT access token
+      description: Submit a valid refresh token to obtain a fresh access token without re-entering credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefreshResponse'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================================
+  # PATIENT MANAGEMENT ENDPOINTS
+  # ============================================================
+  /api/patients/:
+    get:
+      tags:
+        - Patients
+      summary: List authenticated user's patients
+      description: Retrieve all patient records created by the currently authenticated user (ownership isolation).
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of patient records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PatientResponse'
+        '401':
+          description: Unauthorized - missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Patients
+      summary: Create a new patient record
+      description: Add a new patient record owned by the authenticated user. All text fields are strictly sanitized against XSS.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientRequest'
+      responses:
+        '201':
+          description: Patient record created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Patient record created successfully.
+                  data:
+                    $ref: '#/components/schemas/PatientResponse'
+        '400':
+          description: Validation error (e.g. future date of birth, invalid phone, missing fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/patients/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Patient record ID
+        schema:
+          type: integer
+
+    get:
+      tags:
+        - Patients
+      summary: Get patient details
+      description: Retrieve details of a specific patient. Only accessible if created by the authenticated user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Patient details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/PatientResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Patient not found or belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Patients
+      summary: Update patient details
+      description: Update details of a specific patient. Supports partial updates.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientRequest'
+      responses:
+        '200':
+          description: Patient updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Patient record updated successfully.
+                  data:
+                    $ref: '#/components/schemas/PatientResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Patient not found or belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Patients
+      summary: Delete a patient record
+      description: Permanently remove a patient record. Only the creator can delete their patient.
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Patient deleted successfully (no content)
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Patient not found or belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================================
+  # DOCTOR MANAGEMENT ENDPOINTS
+  # ============================================================
+  /api/doctors/:
+    get:
+      tags:
+        - Doctors
+      summary: Retrieve all doctors
+      description: List all registered doctors in the healthcare system. Accessible by any authenticated user.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of doctors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DoctorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Doctors
+      summary: Add a new doctor
+      description: Create a new doctor profile with unique medical license number and specialization.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorRequest'
+      responses:
+        '201':
+          description: Doctor created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Doctor record created successfully.
+                  data:
+                    $ref: '#/components/schemas/DoctorResponse'
+        '400':
+          description: Validation error (e.g. duplicate license number, invalid specialization)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/doctors/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Doctor record ID
+        schema:
+          type: integer
+
+    get:
+      tags:
+        - Doctors
+      summary: Get doctor details
+      description: Retrieve details of a specific doctor by ID.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Doctor details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/DoctorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Doctor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Doctors
+      summary: Update doctor details
+      description: Update details of a doctor. Only the user who created the record can update it.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorRequest'
+      responses:
+        '200':
+          description: Doctor updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Doctor record updated successfully.
+                  data:
+                    $ref: '#/components/schemas/DoctorResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - only the creator can update this doctor record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Doctor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Doctors
+      summary: Delete a doctor record
+      description: Remove a doctor from the system. Only the user who created the record can delete it.
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Doctor record deleted successfully (no content)
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - only the creator can delete this doctor record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Doctor not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================================
+  # PATIENT-DOCTOR MAPPING ENDPOINTS
+  # ============================================================
+  /api/mappings/:
+    get:
+      tags:
+        - Patient-Doctor Mappings
+      summary: Retrieve all mappings
+      description: List all patient-to-doctor assignments across the system.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of mappings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MappingResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Patient-Doctor Mappings
+      summary: Assign a doctor to a patient
+      description: Create a mapping between a patient and a doctor. Duplicate assignments are rejected by database unique constraints.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingRequest'
+      responses:
+        '201':
+          description: Doctor assigned to patient successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Doctor assigned to patient successfully.
+                  data:
+                    $ref: '#/components/schemas/MappingResponse'
+        '400':
+          description: Validation error (e.g. duplicate assignment, non-existent patient or doctor)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/mappings/{patient_id}/:
+    parameters:
+      - name: patient_id
+        in: path
+        required: true
+        description: Patient ID (for GET) or Mapping ID (for DELETE)
+        schema:
+          type: integer
+
+    get:
+      tags:
+        - Patient-Doctor Mappings
+      summary: Get all doctors assigned to a patient
+      description: Retrieve all doctor assignments for a specific patient. Returns empty list if none assigned.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Doctors assigned to patient
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MappingResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Patient-Doctor Mappings
+      summary: Remove a doctor from a patient (direct mapping delete)
+      description: Delete the mapping assignment matching the given mapping ID.
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Doctor removed from patient successfully (no content)
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Mapping not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/mappings/{id}/delete/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Mapping ID
+        schema:
+          type: integer
+
+    delete:
+      tags:
+        - Patient-Doctor Mappings
+      summary: Remove a doctor from a patient (alias route)
+      description: Explicit URL alias to delete a patient-doctor mapping by mapping ID.
+      security:
+        - BearerAuth: []
+      responses:
+        '204':
+          description: Doctor removed from patient successfully (no content)
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Mapping not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# ============================================================
+# COMPONENTS & SCHEMAS
+# ============================================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Access Token authorization header.
+        Format: `Bearer <token>`
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Validation failed.
+        errors:
+          type: object
+          description: Field-specific validation messages
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    UserRegistrationRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+        - password
+        - password_confirm
+      properties:
+        first_name:
+          type: string
+          maxLength: 150
+          example: John
+        last_name:
+          type: string
+          maxLength: 150
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecurePass123!
+        password_confirm:
+          type: string
+          format: password
+          example: SecurePass123!
+
+    UserLoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        password:
+          type: string
+          format: password
+          example: SecurePass123!
+
+    TokenRefreshRequest:
+      type: object
+      required:
+        - refresh
+      properties:
+        refresh:
+          type: string
+          description: Valid refresh token from login or registration
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    TokenRefreshResponse:
+      type: object
+      properties:
+        access:
+          type: string
+          description: New access token
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        email:
+          type: string
+          example: john.doe@example.com
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Doe
+
+    AuthTokens:
+      type: object
+      properties:
+        access:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    AuthSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        message:
+          type: string
+          example: User registered successfully.
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/UserResponse'
+            tokens:
+              $ref: '#/components/schemas/AuthTokens'
+
+    PatientRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - date_of_birth
+        - gender
+        - phone
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          example: Alice
+        last_name:
+          type: string
+          maxLength: 100
+          example: Smith
+        date_of_birth:
+          type: string
+          format: date
+          example: "1990-05-15"
+        gender:
+          type: string
+          enum: [M, F, O]
+          example: F
+        phone:
+          type: string
+          maxLength: 20
+          example: "+1-555-0199"
+        email:
+          type: string
+          format: email
+          example: alice.smith@example.com
+        address:
+          type: string
+          example: "123 Health Ave, Medical City"
+        medical_history:
+          type: string
+          example: "No known chronic illnesses. Penicillin allergy."
+
+    PatientResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        created_by:
+          type: string
+          example: john.doe@example.com
+        first_name:
+          type: string
+          example: Alice
+        last_name:
+          type: string
+          example: Smith
+        date_of_birth:
+          type: string
+          format: date
+          example: "1990-05-15"
+        gender:
+          type: string
+          example: F
+        phone:
+          type: string
+          example: "+1-555-0199"
+        email:
+          type: string
+          example: alice.smith@example.com
+        address:
+          type: string
+          example: "123 Health Ave, Medical City"
+        medical_history:
+          type: string
+          example: "No known chronic illnesses. Penicillin allergy."
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-27T14:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-10-27T14:30:00Z"
+
+    DoctorRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - specialization
+        - phone
+        - license_number
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+          example: Gregory
+        last_name:
+          type: string
+          maxLength: 100
+          example: House
+        specialization:
+          type: string
+          enum:
+            - general
+            - cardiology
+            - dermatology
+            - neurology
+            - orthopedics
+            - pediatrics
+            - psychiatry
+            - surgery
+            - oncology
+            - gynecology
+            - urology
+            - radiology
+            - ophthalmology
+            - ent
+            - other
+          example: cardiology
+        phone:
+          type: string
+          maxLength: 20
+          example: "+1-555-0144"
+        email:
+          type: string
+          format: email
+          example: dr.house@hospital.org
+        license_number:
+          type: string
+          maxLength: 50
+          example: "MED-LIC-998811"
+        years_of_experience:
+          type: integer
+          minimum: 0
+          maximum: 70
+          example: 15
+
+    DoctorResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        created_by:
+          type: string
+          example: john.doe@example.com
+        first_name:
+          type: string
+          example: Gregory
+        last_name:
+          type: string
+          example: House
+        specialization:
+          type: string
+          example: cardiology
+        specialization_display:
+          type: string
+          example: Cardiology
+        phone:
+          type: string
+          example: "+1-555-0144"
+        email:
+          type: string
+          example: dr.house@hospital.org
+        license_number:
+          type: string
+          example: "MED-LIC-998811"
+        years_of_experience:
+          type: integer
+          example: 15
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-27T14:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-10-27T14:30:00Z"
+
+    MappingRequest:
+      type: object
+      required:
+        - patient
+        - doctor
+      properties:
+        patient:
+          type: integer
+          description: ID of the patient to map
+          example: 1
+        doctor:
+          type: integer
+          description: ID of the doctor to assign
+          example: 1
+
+    MappingResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        patient:
+          type: integer
+          example: 1
+        patient_name:
+          type: string
+          example: Alice Smith
+        doctor:
+          type: integer
+          example: 1
+        doctor_name:
+          type: string
+          example: Dr. Gregory House
+        created_by:
+          type: string
+          example: john.doe@example.com
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-10-27T14:15:00Z"

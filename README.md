@@ -99,7 +99,31 @@ The API will be available at `http://localhost:8000/`.
 
 ---
 
+## Interactive API Documentation (OpenAPI & Swagger UI)
+
+An OpenAPI 3.0.3 specification is included in the project root as `openapi.yaml`.
+
+You can also explore and test all API endpoints interactively via the built-in Swagger UI:
+
+- **Interactive Swagger UI**: [`http://localhost:8000/api/docs/`](http://localhost:8000/api/docs/)
+- **Raw OpenAPI YAML Schema**: [`http://localhost:8000/api/schema/`](http://localhost:8000/api/schema/)
+- **OpenAPI Spec File**: `openapi.yaml` (importable into Postman, Insomnia, Swagger Editor)
+
+To test authenticated endpoints in Swagger UI:
+1. Register or login to obtain an `access` token.
+2. Click the green **Authorize** button in Swagger UI.
+3. Paste the token as `Bearer <access_token>`.
+
+---
+
 ## API Endpoints
+
+### Documentation & Schema
+
+| Method | Endpoint                    | Description                           | Auth Required |
+|--------|-----------------------------|---------------------------------------|---------------|
+| GET    | `/api/docs/`                | Interactive Swagger UI Documentation  | No            |
+| GET    | `/api/schema/`              | Raw OpenAPI 3.0.3 YAML Schema         | No            |
 
 ### Authentication
 
