@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # ============================================================
+  # 1. PostgreSQL Database Service
+  # ============================================================
+  db:
+    image: postgres:16-alpine
+    container_name: healthcare_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: healthcare_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d healthcare_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # 2. Django REST Framework Backend Service
+  # ============================================================
+  web:
+    build: .
+    container_name: healthcare_api
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py loaddata seed_data.json &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "True"
+      SECRET_KEY: "django-insecure-docker-secret-key-development"
+      ALLOWED_HOSTS: "localhost,127.0.0.1,web"
+      DB_NAME: "healthcare_db"
+      DB_USER: "postgres"
+      DB_PASSWORD: "postgres"
+      DB_HOST: "db"
+      DB_PORT: "5432"
+      DB_CONN_MAX_AGE: "600"
+      JWT_ACCESS_TOKEN_LIFETIME_MINUTES: "60"
+      JWT_REFRESH_TOKEN_LIFETIME_DAYS: "7"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ============================================================
+  # 3. Streamlit Interactive Testing Dashboard Service
+  # ============================================================
+  streamlit:
+    build: .
+    container_name: healthcare_streamlit
+    restart: unless-stopped
+    command: >
+      streamlit run streamlit_app.py
+      --server.port 8501
+      --server.address 0.0.0.0
+      --server.headless true
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      BASE_URL: "http://web:8000"
+    depends_on:
+      - web
+
+# ============================================================
+# PERSISTENT VOLUMES
+# ============================================================
+volumes:
+  postgres_data:

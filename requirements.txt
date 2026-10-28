@@ -9,3 +9,5 @@ PyJWT==2.15.1
 python-decouple==3.8
 sqlparse==0.6.0
 webencodings==0.6.1
+requests>=2.31.0
+streamlit>=1.35.0

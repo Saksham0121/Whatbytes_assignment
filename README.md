@@ -1,4 +1,4 @@
-# 🏥 Healthcare Backend API & Evaluator Platform
+# 🏥 Healthcare Backend API & Testing Platform
 
 A secure, production-grade RESTful backend system for a healthcare application built with **Django**, **Django REST Framework (DRF)**, and **PostgreSQL**.
 
@@ -14,9 +14,9 @@ The system provides robust JWT authentication, patient record management with ow
 - **Zero-Tolerance Input Sanitization**: Centralized strict HTML tag, event handler (`onerror`, `onload`), and null byte (`\x00`) stripping to neutralize stored XSS and PostgreSQL string corruption.
 - **Adversarial Jailbreak & Prompt Injection Defense**: Malicious prompt injections and template injection strings (`{{7*7}}`) are sanitized and stored as inert passive text without privilege escalation.
 - **Built-in Scalability**: PostgreSQL connection pooling (`CONN_MAX_AGE = 600`), persistent connection health checks, `GZipMiddleware` HTTP response compression, and in-memory caching.
-- **Two Interactive UIs for Evaluators**:
+- **Two Interactive UIs for Testing**:
   - **Swagger UI** live at `/api/docs/` powered by a standard-compliant `openapi.yaml` specification.
-  - **Streamlit Evaluator Dashboard** live at `http://localhost:8501` featuring one-click demo login, CRUD forms, and live security attack demonstrations.
+  - **Streamlit Testing Dashboard** live at `http://localhost:8501` featuring one-click demo login, CRUD forms, and live security attack demonstrations.
 - **Automated Test Suite**: 72 comprehensive tests covering authentication, CRUD, business rules, edge cases, and security exploits.
 
 ---
@@ -32,7 +32,7 @@ The system provides robust JWT authentication, patient record management with ow
 | **Sanitization** | Bleach | Zero-tolerance HTML and attribute stripping |
 | **Configuration** | python-decouple | 12-Factor environment variable management |
 | **API Specification** | OpenAPI 3.0.3 & Swagger UI | Interactive documentation and schema |
-| **Evaluation UI** | Streamlit | Interactive evaluator dashboard |
+| **Testing UI** | Streamlit | Interactive testing dashboard |
 
 ---
 
@@ -70,6 +70,10 @@ Whatbytes_Django/
 │   └── test_security_and_features.py
 ├── openapi.yaml                # OpenAPI 3.0.3 specification file
 ├── streamlit_app.py            # Interactive Streamlit evaluation dashboard
+├── seed_data.json              # Pre-seeded database fixture (users, doctors, patients)
+├── Dockerfile                  # Container definition for Django & Streamlit
+├── docker-compose.yml          # Multi-container orchestration (DB, API, Streamlit)
+├── .dockerignore               # Docker build exclusions
 ├── requirements.txt            # Project dependencies
 ├── .env.example                # Template for environment variables
 ├── .gitignore                  # Git ignore rules
@@ -80,16 +84,44 @@ Whatbytes_Django/
 
 ## 🚀 Quickstart & Setup Guide
 
-### 1. Prerequisites
+Choose between the **1-Click Docker Setup** (fastest and zero-configuration) or the standard **Local Virtual Environment Setup**.
+
+### 🐳 Option A: 1-Click Docker Setup (Recommended)
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Saksham0121/Whatbytes_assignment.git
+cd Whatbytes_assignment
+
+# 2. Build and launch all services with a single command
+docker-compose up --build
+```
+
+> **Tip**: If you previously started Django or Streamlit locally in a terminal, stop them (`Ctrl+C`) before running `docker-compose up` so host ports `8000` and `8501` are free.
+
+**What Docker automatically does for you:**
+1. Spins up a dedicated **PostgreSQL 16** container with built-in health checks.
+2. Applies all Django database migrations.
+3. Automatically pre-populates initial seed data ([`seed_data.json`](seed_data.json)).
+4. Starts the **Django REST API** on [http://localhost:8000](http://localhost:8000).
+5. Starts the **Streamlit Interactive Testing Dashboard** on [http://localhost:8501](http://localhost:8501).
+
+---
+
+### 💻 Option B: Local Virtual Environment Setup
+
+#### 1. Prerequisites
 Ensure you have **Python 3.11+** and **PostgreSQL** installed and running on your system.
 
-### 2. Clone the Repository
+#### 2. Clone the Repository
 ```bash
 git clone https://github.com/Saksham0121/Whatbytes_assignment.git
 cd Whatbytes_assignment
 ```
 
-### 3. Create & Activate Virtual Environment
+#### 3. Create & Activate Virtual Environment
 ```bash
 # macOS/Linux
 python3 -m venv venv
@@ -100,12 +132,12 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
-### 4. Install Dependencies
+#### 4. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 5. Configure Environment Variables
+#### 5. Configure Environment Variables
 Create a `.env` file in the project root based on `.env.example`:
 ```bash
 cp .env.example .env
@@ -130,27 +162,45 @@ JWT_ACCESS_TOKEN_LIFETIME_MINUTES=60
 JWT_REFRESH_TOKEN_LIFETIME_DAYS=7
 ```
 
-### 6. Create PostgreSQL Database
+#### 6. Create PostgreSQL Database
 Ensure your PostgreSQL server is running, then create the database:
 ```bash
-# Using psql CLI
 psql -U postgres -c "CREATE DATABASE healthcare_db;"
 ```
 
-### 7. Run Database Migrations
+#### 7. Run Database Migrations & Load Seed Data
 ```bash
 venv/bin/python manage.py makemigrations
 venv/bin/python manage.py migrate
+
+# (Recommended) Load sample users, doctors, patients, and mappings instantly:
+venv/bin/python manage.py loaddata seed_data.json
 ```
 
-### 8. Run the Development Server
-You can start the server using the virtual environment binary directly:
+#### 8. Run the Development Server
 ```bash
 venv/bin/python manage.py runserver
 ```
 *(If port 8000 is occupied, run `venv/bin/python manage.py runserver 8001`)*
 
-The API will be live at `http://localhost:8000/`.
+The API will be live at `http://localhost:8000/` (automatically redirects to Swagger UI).
+
+#### 9. Run the Streamlit Dashboard (In a separate terminal)
+```bash
+source venv/bin/activate
+streamlit run streamlit_app.py
+```
+
+---
+
+### 🔑 Pre-Seeded Test Credentials
+
+Loading [`seed_data.json`](seed_data.json) provides pre-configured credentials for immediate testing:
+
+| Account Role | Username / Email | Password | Access Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Superuser / Admin** | `admin` | `AdminPassword123!` | Full database inspection & management at `/admin/` and all APIs |
+| **Doctor / User** | `saksham@gmail.com` | `Password123!` | Patient & Doctor CRUD, Relational Mappings, Streamlit UI |
 
 ---
 
@@ -162,22 +212,9 @@ The repository includes a comprehensive 72-test test suite covering all function
 venv/bin/python manage.py test tests
 ```
 
-### Test Suite Output
-```text
-Found 72 test(s).
-Creating test database for alias 'default'...
-System check identified no issues (0 silenced).
-........................................................................
-----------------------------------------------------------------------
-Ran 72 tests in 6.295s
-
-OK
-Destroying test database for alias 'default'...
-```
-
 ---
 
-## 🖥️ Evaluator Interfaces
+## 🖥️ Interactive Testing Interfaces
 
 ### 1. Interactive Swagger UI
 Explore and execute live requests against the backend directly from your web browser:
@@ -187,16 +224,22 @@ Explore and execute live requests against the backend directly from your web bro
 
 > **Tip for Swagger UI**: To test protected endpoints, register or login to receive an access token, click the green **Authorize** button at the top right, and enter `Bearer <your_token>`.
 
-### 2. Streamlit Evaluator Dashboard
-A dedicated, evaluator-friendly UI designed for rapid end-to-end evaluation:
+### 2. Streamlit Testing Dashboard
+A dedicated, tester-friendly UI designed for rapid end-to-end testing and verification:
 ```bash
 venv/bin/streamlit run streamlit_app.py
 ```
 Open [http://localhost:8501](http://localhost:8501) in your browser to access:
-* **1-Click Demo Login**: Instantly login without manually typing credentials.
+* **1-Click Demo Login**: Instantly login as QA Tester without manually typing credentials.
 * **Patient & Doctor Management**: Create, browse, inspect, and delete records with live tabular displays.
-* **Patient-Doctor Assignment**: Seamlessly assign doctors to patients and review relational links.
+* **Patient-Doctor Assignment**: Seamlessly assign doctors to patients with smart auto-populated dropdowns.
 * **Interactive Security Playground**: Execute live SQLi, XSS, IDOR, and AI prompt injection attacks to verify real-time neutralization.
+
+### 3. Django Database Admin Panel
+Direct visual inspection, search, and table editing:
+* **Admin Panel URL**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
+* **Username**: `admin`
+* **Password**: `AdminPassword123!`
 
 ---
 
@@ -384,8 +427,3 @@ curl -X DELETE http://localhost:8000/api/mappings/1/ \
 | `JWT_ACCESS_TOKEN_LIFETIME_MINUTES` | `60` | Access token lifespan before refresh required |
 | `JWT_REFRESH_TOKEN_LIFETIME_DAYS` | `7` | Refresh token valid lifespan |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000...` | Whitelisted cross-origin domains |
-
----
-
-## 📄 License
-This project was developed as a technical evaluation assignment. Licensed under the [MIT License](LICENSE).

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 
 def openapi_schema_view(request):
@@ -51,6 +52,8 @@ def swagger_ui_view(request):
 
 
 urlpatterns = [
+    # Redirect root / directly to Swagger UI documentation
+    path("", RedirectView.as_view(url="/api/docs/", permanent=False), name="root-redirect"),
     path("admin/", admin.site.urls),
     path("api/schema/", openapi_schema_view, name="openapi-schema"),
     path("api/docs/", swagger_ui_view, name="swagger-ui"),

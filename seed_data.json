@@ -1,0 +1,237 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$qmjdiiOngqUXb6ccGTjszp$CkhqAFRbABiCMlGkFb8SST6H7Yo6NjZE7VgS8gFlArQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test@example.com",
+    "first_name": "Test",
+    "last_name": "User",
+    "email": "test@example.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-27T14:21:11.851Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$99krYdJJWuUogZAkLUFSwm$alJGCnsDiGOqKHWpcDNB9O3QFD650zngp4S8tTYfoks=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "live_check@health.local",
+    "first_name": "Live",
+    "last_name": "Check",
+    "email": "live_check@health.local",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-27T16:35:12.618Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$wUptV2e3rEmy5daTPnAzBn$koRusu768xTGcuBQ7i2JfdIlvUfrvCEmFlaEjDhsFzY=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "sakshamsahu77783@gmail.com",
+    "first_name": "Saksham",
+    "last_name": "Sahu",
+    "email": "sakshamsahu77783@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-27T17:12:54.565Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$MX5u0hUaQZdt8Dlxljjps5$yQKlQQKhmti7qI26/9yer45BkxNumiTg9Uend5GtSNQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "evaluator@test.com",
+    "first_name": "Demo",
+    "last_name": "Evaluator",
+    "email": "evaluator@test.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-27T17:49:29.610Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$tZTjQTA01TvNi5mu84drsp$By+ArNI9H4+gEtIxl8H7ZNu7iV9QDzFE4nym8T7d0K0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "saksham@gamil.com",
+    "first_name": "Saksham",
+    "last_name": "Sahu",
+    "email": "saksham@gamil.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-27T18:01:30.456Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$NMCdBWYstRPIgaBV44xfHG$aCH9zgLYIMFQ+fop6j7KgDp7WqJ483PujYZ7Bf4PDe0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "tester@test.com",
+    "first_name": "Demo",
+    "last_name": "Tester",
+    "email": "tester@test.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-10-27T18:51:49.479Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$5dAhdVXm0tpVxhAygPDtAR$ld3Ce+i1WffGtAcGzQU7ypZSGeeSTwnKdcx/YW/qNJE=",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "saksham@gmail.com",
+    "first_name": "Saksham",
+    "last_name": "Sahu",
+    "email": "saksham@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-28T13:39:49.072Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$870000$jWwSjjV1elHBFg2JEBS8oJ$Luxz+iFhlPmBLtSy8QRtkU4A8lGNDwxGclCqMTn+M/E=",
+    "last_login": "2026-10-28T13:44:30.701Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@healthcare.local",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-10-28T13:42:30.080Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "patients.patient",
+  "pk": 1,
+  "fields": {
+    "created_by": [
+      "test@example.com"
+    ],
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "date_of_birth": "1990-05-15",
+    "gender": "F",
+    "phone": "+1-555-0123",
+    "email": "",
+    "address": "",
+    "medical_history": "",
+    "created_at": "2026-10-27T14:21:18.526Z",
+    "updated_at": "2026-10-27T14:21:18.526Z"
+  }
+},
+{
+  "model": "patients.patient",
+  "pk": 2,
+  "fields": {
+    "created_by": [
+      "saksham@gamil.com"
+    ],
+    "first_name": "patient1",
+    "last_name": "Doe",
+    "date_of_birth": "1990-01-01",
+    "gender": "M",
+    "phone": "+91-555-0123",
+    "email": "john.doe@email.com",
+    "address": "123 Hospital Lane, haridwar",
+    "medical_history": "No known chronic illnesses. Penicillin allergy.",
+    "created_at": "2026-10-27T18:08:01.195Z",
+    "updated_at": "2026-10-27T18:08:01.195Z"
+  }
+},
+{
+  "model": "patients.patient",
+  "pk": 3,
+  "fields": {
+    "created_by": [
+      "saksham@gamil.com"
+    ],
+    "first_name": "patient2",
+    "last_name": "Doe",
+    "date_of_birth": "1990-01-01",
+    "gender": "M",
+    "phone": "+91-555-0123",
+    "email": "patient2@email.com",
+    "address": "123 Hospital Lane, haridwar",
+    "medical_history": "No known chronic illnesses. cold",
+    "created_at": "2026-10-27T18:08:14.474Z",
+    "updated_at": "2026-10-27T18:08:14.474Z"
+  }
+},
+{
+  "model": "doctors.doctor",
+  "pk": 1,
+  "fields": {
+    "created_by": [
+      "test@example.com"
+    ],
+    "first_name": "Sarah",
+    "last_name": "Johnson",
+    "specialization": "cardiology",
+    "phone": "+1-555-9876",
+    "email": "",
+    "license_number": "MED-2024-001",
+    "years_of_experience": 12,
+    "created_at": "2026-10-27T14:21:33.100Z",
+    "updated_at": "2026-10-27T14:21:33.100Z"
+  }
+},
+{
+  "model": "mappings.patientdoctormapping",
+  "pk": 1,
+  "fields": {
+    "patient": 1,
+    "doctor": 1,
+    "created_by": [
+      "test@example.com"
+    ],
+    "created_at": "2026-10-27T14:21:33.145Z"
+  }
+},
+{
+  "model": "mappings.patientdoctormapping",
+  "pk": 2,
+  "fields": {
+    "patient": 2,
+    "doctor": 1,
+    "created_by": [
+      "saksham@gamil.com"
+    ],
+    "created_at": "2026-10-27T18:08:57.137Z"
+  }
+}
+]
